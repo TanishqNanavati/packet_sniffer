@@ -16,6 +16,7 @@ set(SRC_FILES
   main.c
   src/parser.c
   src/sniffer.c
+  src/pcap_writer.c
   src/util.c
 )
 

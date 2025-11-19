@@ -14,6 +14,8 @@
 #include <arpa/inet.h>
 #include <linux/if_ether.h>
 
+#include "pcap_writer.h"   // <--- ADDED
+
 static volatile sig_atomic_t g_running = 1;
 static void handle_sigint(int sig) { (void)sig; g_running = 0; }
 
@@ -73,22 +75,31 @@ static int setup_socket(Sniffer* s) {
 
 static void process_packet(const uint8_t* buffer, ssize_t len) {
     print_eth(buffer, (size_t)len);
+
     if (len < (ssize_t)sizeof(struct EthHeader)) return;
+
     const struct EthHeader* eth = (const struct EthHeader*)buffer;
     uint16_t etype = ntohs(eth->ethertype);
+
     if (etype == 0x0806) {
         print_arp(buffer, (size_t)len);
         printf("\n");
         return;
     }
+
     if (etype != 0x0800) {
         printf("%sNon-IPv4 Ethertype: 0x%04x%s\n\n", COLOR_WHITE, etype, COLOR_RESET);
         return;
     }
+
     if (len < (ssize_t)(sizeof(struct EthHeader) + sizeof(struct IPv4Header))) return;
-    const struct IPv4Header* ip = (const struct IPv4Header*)(buffer + sizeof(struct EthHeader));
+
+    const struct IPv4Header* ip =
+        (const struct IPv4Header*)(buffer + sizeof(struct EthHeader));
     size_t ihl = (ip->ver_ihl & 0x0F) * 4;
+
     print_ip(buffer, (size_t)len);
+
     switch (ip->protocol) {
         case IPPROTO_TCP:
             print_tcp(buffer, (size_t)len, ihl);
@@ -100,7 +111,8 @@ static void process_packet(const uint8_t* buffer, ssize_t len) {
             print_icmp(buffer, (size_t)len, ihl);
             break;
         default:
-            printf("%sOther IP protocol: %u%s\n", COLOR_WHITE, (unsigned)ip->protocol, COLOR_RESET);
+            printf("%sOther IP protocol: %u%s\n", COLOR_WHITE,
+                   (unsigned)ip->protocol, COLOR_RESET);
             break;
     }
     printf("\n");
@@ -109,11 +121,20 @@ static void process_packet(const uint8_t* buffer, ssize_t len) {
 int Sniffer_start(Sniffer* s) {
     if (!s) return -1;
     if (setup_socket(s) != 0) return -1;
+
     fprintf(stderr, "Sniffer started on interface: %s\n", s->iface);
+
     const size_t BUF_SZ = 65536;
     uint8_t *buffer = malloc(BUF_SZ);
     if (!buffer) return -1;
+
+    // OPEN PCAP FILE FOR WRITING
+    if (pcap_writer_open("capture.pcap") != 0) {
+        fprintf(stderr, "Warning: could not open capture.pcap for writing\n");
+    }
+
     unsigned int seen = 0;
+
     while (g_running) {
         ssize_t len = recvfrom(s->sockfd, buffer, BUF_SZ, 0, NULL, NULL);
         if (len <= 0) {
@@ -121,12 +142,24 @@ int Sniffer_start(Sniffer* s) {
             fprintf(stderr, "recvfrom error: %s\n", strerror(errno));
             break;
         }
-        if (!packet_matches_filter(buffer, (size_t)len, &s->filter)) continue;
+
+        if (!packet_matches_filter(buffer, (size_t)len, &s->filter))
+            continue;
+
+        // WRITE PACKET TO PCAP FILE
+        pcap_writer_write_packet(buffer, (size_t)len);
+
         process_packet(buffer, len);
+
         ++seen;
         if (s->count > 0 && seen >= s->count) break;
     }
+
     free(buffer);
+
+    // CLOSE PCAP FILE
+    pcap_writer_close();
+
     fprintf(stderr, "Sniffer stopped.\n");
     return 0;
 }
