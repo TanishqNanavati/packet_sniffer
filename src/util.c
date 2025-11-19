@@ -17,7 +17,7 @@ void ip_to_string(uint32_t ip_be,char*buff,size_t bufflen){
     a.s_addr = ip_be;
     if(inet_ntop(AF_INET,&a,buff,(socklen_t)bufflen) == NULL){  // Converts network-order IPv4 to string
         strncpy(buff,"0.0.0.0",bufflen);
-        buff[bufflen-1] = "\0";
+        buff[bufflen-1] = '\0';
     }
 }
 

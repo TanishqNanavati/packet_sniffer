@@ -12,7 +12,6 @@ typedef struct IPv4Header IPv4Header;
 typedef struct ARPHeader ARPHeader;
 typedef struct TCPHeader TCPHeader;
 typedef struct UDPHeader UDPHeader;
-typedef struct EthHeader EthHeader;
 typedef struct ICMPHeader ICMPHeader;
 
 
