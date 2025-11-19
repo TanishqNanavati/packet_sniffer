@@ -1,0 +1,26 @@
+# Build directories
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+
+# Executables
+*.out
+*.o
+*.a
+*.so
+sniffer
+
+# Logs
+*.log
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+
+# Backup / temp files
+*.swp
+*.swo
+*~
