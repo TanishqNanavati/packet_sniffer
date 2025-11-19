@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 // Ethernet Header
-struct EtherHeader{
+struct EthHeader{
     uint8_t src[6];
     uint8_t dest[6];
     uint16_t ethertype;  // byte order or network order
